@@ -3,16 +3,16 @@ package com.fstg.vote_electronique.client.controllers;
 import com.fstg.vote_electronique.client.GetRemoteService;
 import com.fstg.vote_electronique.client.dto.VoteDto;
 import com.fstg.vote_electronique.client.dto.VoterDto;
+import com.fstg.vote_electronique.client.exception.CandidateAlreadyExist;
+import com.fstg.vote_electronique.client.exception.CandidateNotFoundException;
+import com.fstg.vote_electronique.client.exception.VoterAlreadyExiste;
+import com.fstg.vote_electronique.client.exception.VoterNotFoundException;
 import com.fstg.vote_electronique.client.response.ResultReponse;
 import com.fstg.vote_electronique.client.service.CandidatService;
 import com.fstg.vote_electronique.client.service.VoterService;
 import com.fstg.vote_electronique.server.Vote;
 import com.fstg.vote_electronique.shared.beans.Candidate;
-import com.fstg.vote_electronique.shared.beans.RegisterdVoter;
-import com.fstg.vote_electronique.shared.beans.VoteModel;
 import com.fstg.vote_electronique.shared.beans.Voter;
-import com.fstg.vote_electronique.shared.utilsSignature.GetKey;
-import javassist.NotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,14 +28,13 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Collections;
 import java.util.List;
 
 @RestController()
 public class HomeController {
 
-    private GetRemoteService getRemoteService = GetRemoteService.getInstance();
-    private Vote remote_service = getRemoteService.getService();
+    private final GetRemoteService getRemoteService = GetRemoteService.getInstance();
+    private final Vote remote_service = getRemoteService.getService();
 
     @Autowired
     private VoterService voterService;
@@ -49,6 +48,9 @@ public class HomeController {
         byte[] bytes = null;
         try {
             voter = new Voter(voterDto.getName());
+            Voter voterF = voterService.findByName(voterDto.getName());
+            if (voterF != null)
+                throw new VoterAlreadyExiste("Voter with name " + voterDto.getName() + " already exists");
             voter = voterService.saveVoter(voter);
             bytes = remote_service.register(voter.getId());
             KeyFactory keyFactory = KeyFactory.getInstance("DSA");
@@ -59,6 +61,7 @@ public class HomeController {
         } catch (RemoteException | NoSuchAlgorithmException | InvalidKeySpecException e) {
             e.printStackTrace();
         }
+
         return voter;
     }
 
@@ -75,12 +78,11 @@ public class HomeController {
 
     @PostMapping("/candidates")
     public Candidate addCandidat(@RequestBody() Candidate candidate) {
-        try {
-            return candidatService.addCandidat(candidate);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
+
+        Candidate candiF = candidatService.findByName(candidate.getName());
+        if (candiF != null)
+            throw new CandidateAlreadyExist("Candidate with name " + candidate.getName() + " already exists");
+        return candidatService.addCandidat(candidate);
     }
 
     //
@@ -89,10 +91,10 @@ public class HomeController {
         try {
             Candidate candidate = null;
             if (voterService.findById(voteDto.getVoter_id()) == null) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Voter not found");
+                throw new VoterNotFoundException("Voter not found");
             }
             if (candidatService.findById(voteDto.getCandidatId()) == null) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidate not found");
+                throw new CandidateNotFoundException("Candidate not found");
             }
             long id = remote_service.vote(voteDto);
             System.out.println("Id du Candidate est " + id);

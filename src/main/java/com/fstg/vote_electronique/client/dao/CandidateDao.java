@@ -9,6 +9,6 @@ import java.security.PublicKey;
 
 @Repository()
 public interface CandidateDao extends JpaRepository<Candidate, Long> {
-
+    public Candidate findByName(String name);
 
 }

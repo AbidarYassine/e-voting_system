@@ -1,9 +1,8 @@
-package com.fstg.vote_electronique.client.serviceImpl;
+package com.fstg.vote_electronique.client.service.serviceImpl;
 
 import com.fstg.vote_electronique.client.dao.CandidateDao;
 import com.fstg.vote_electronique.client.service.CandidatService;
 import com.fstg.vote_electronique.shared.beans.Candidate;
-import com.fstg.vote_electronique.shared.beans.Voter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -29,5 +28,10 @@ public class CandidateService implements CandidatService {
     public Candidate findById(Long id) {
         Optional<Candidate> candidate = candidateDao.findById(id);
         return candidate.orElse(null);
+    }
+
+    @Override
+    public Candidate findByName(String name) {
+        return candidateDao.findByName(name);
     }
 }

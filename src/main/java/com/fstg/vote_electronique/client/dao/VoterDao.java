@@ -8,5 +8,5 @@ import java.security.PublicKey;
 
 @Repository()
 public interface VoterDao extends JpaRepository<Voter, Long> {
-    public Voter findByPublicKey(PublicKey publicKey);
+    public Voter findByName(String name);
 }

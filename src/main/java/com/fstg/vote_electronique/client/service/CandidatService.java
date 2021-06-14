@@ -12,4 +12,5 @@ public interface CandidatService {
     public Candidate addCandidat(Candidate candidate);
 
     public Candidate findById(Long id);
+    public Candidate findByName(String name);
 }

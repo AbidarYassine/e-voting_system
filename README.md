@@ -1,7 +1,7 @@
 # e-voting_system
 
 Le but du projet est mettre en ouvre le principe de la signature digitale qui permet d'authentifier de manière fiable l'utilisateur.
-pour cree u systeme de vote.
+pour crée u systeme de vote.
 Le projet est une rest api cree par spring boot et rmi.
 
 ## Table des matières

@@ -25,3 +25,7 @@ Le projet est une rest api cree par spring boot et rmi.
   <a name="verification"></a>
  ### a. verification
  #### vérification la signature numérique par le public key.
+<a name="test"></a>
+## 2. Tester le système
+![plot](./screan/vote.png"Vote Method")
+

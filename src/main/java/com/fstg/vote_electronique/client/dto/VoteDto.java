@@ -12,6 +12,16 @@ public class VoteDto implements Serializable {
 
     private String message;
 
+    private byte[] signature;
+
+    public byte[] getSignature() {
+        return signature;
+    }
+
+    public void setSignature(byte[] signature) {
+        this.signature = signature;
+    }
+
     public long getCandidatId() {
         return candidatId;
     }

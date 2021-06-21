@@ -1,8 +1,8 @@
 package com.fstg.vote_electronique.server;
 
 
+import com.fstg.vote_electronique.client.State;
 import com.fstg.vote_electronique.client.dto.VoteDto;
-import com.fstg.vote_electronique.shared.beans.VoteModel;
 import com.fstg.vote_electronique.shared.utilsSignature.GetKey;
 
 import java.rmi.RemoteException;
@@ -14,42 +14,24 @@ public class VoteImpl extends UnicastRemoteObject implements Vote {
     }
 
     @Override
-    public byte[] register(long id) throws RemoteException {
-        KeyPair key = null;
+    public long vote(VoteDto voteDto, PublicKey publicKey) {
+        boolean auth = false;
         try {
-            key = GetKey.generateKeyPair();
-            State.addVoter(id, key);
-            return key.getPublic().getEncoded();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-            return null;
-        } catch (NoSuchProviderException e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    @Override
-    public long vote(VoteDto vote) throws RemoteException {
-        try {
-            KeyPair keyPair = State.getById(vote.getVoter_id());
-            byte[] signMessage = GetKey.signMessage(keyPair.getPrivate(), vote.getMessage());
-            boolean auth = GetKey.verify(keyPair.getPublic(), vote.getMessage(), signMessage);
+            auth = GetKey.verify(publicKey, voteDto.getMessage(), voteDto.getSignature());
             if (!auth) {
                 System.err.println("Signature is not correct !!");
                 return -1;
             }
-            boolean voted = State.getVoted_voters().contains(keyPair.getPublic());
+            boolean voted = State.getVoted_voters().contains(publicKey);
             if (voted) {
-                System.err.println("voter with publicKey" + keyPair.getPublic() + " already voted !!");
+                System.err.println("voter with publicKey" + publicKey + " already voted !!");
                 return -2;
             } else {
-                State.addVoterVoted(keyPair.getPublic());
+                State.addVoterVoted(publicKey);
             }
-            return vote.getCandidatId();
         } catch (NoSuchAlgorithmException | NoSuchProviderException | SignatureException | InvalidKeyException e) {
             e.printStackTrace();
-            return 0;
         }
+        return voteDto.getCandidatId();
     }
 }

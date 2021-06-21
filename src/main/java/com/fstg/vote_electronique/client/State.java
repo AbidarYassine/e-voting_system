@@ -1,4 +1,4 @@
-package com.fstg.vote_electronique.server;
+package com.fstg.vote_electronique.client;
 
 import java.security.KeyPair;
 import java.security.PublicKey;
@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 
 public class State {
-
     static HashMap<Long, KeyPair> keyPair_idVoter = new HashMap<>();
 
     static List<PublicKey> voted_voters = new ArrayList<>();
@@ -16,7 +15,7 @@ public class State {
         return voted_voters;
     }
 
-    static void addVoterVoted(PublicKey publicKey) {
+    public static void addVoterVoted(PublicKey publicKey) {
         voted_voters.add(publicKey);
     }
 
@@ -33,5 +32,4 @@ public class State {
         ArrayList<KeyPair> keyList = new ArrayList(keyPair_idVoter.keySet());
         return keyList;
     }
-
 }

@@ -1,6 +1,7 @@
 package com.fstg.vote_electronique.client.controllers;
 
 import com.fstg.vote_electronique.client.GetRemoteService;
+import com.fstg.vote_electronique.client.State;
 import com.fstg.vote_electronique.client.dto.VoteDto;
 import com.fstg.vote_electronique.client.dto.VoterDto;
 import com.fstg.vote_electronique.client.exception.CandidateAlreadyExist;
@@ -13,6 +14,7 @@ import com.fstg.vote_electronique.client.service.VoterService;
 import com.fstg.vote_electronique.server.Vote;
 import com.fstg.vote_electronique.shared.beans.Candidate;
 import com.fstg.vote_electronique.shared.beans.Voter;
+import com.fstg.vote_electronique.shared.utilsSignature.GetKey;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,11 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.rmi.RemoteException;
-import java.security.KeyFactory;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
+import java.security.*;
 import java.util.List;
 
 @RestController()
@@ -43,23 +41,20 @@ public class HomeController {
     @PostMapping("/voter/register")
     public Voter home(@RequestBody() VoterDto voterDto) {
         Voter voter = null;
-        byte[] bytes = null;
+        KeyPair key = null;
         try {
             voter = new Voter(voterDto.getName());
             Voter voterF = voterService.findByName(voterDto.getName());
             if (voterF != null)
                 throw new VoterAlreadyExiste("Voter with name " + voterDto.getName() + " already exists");
             voter = voterService.saveVoter(voter);
-            bytes = remote_service.register(voter.getId());
-            KeyFactory keyFactory = KeyFactory.getInstance("DSA");
-            X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(bytes);
-            PublicKey pk = keyFactory.generatePublic(publicKeySpec);
-            voter.setPublicKey(pk.toString());
+            key = GetKey.generateKeyPair();
+            State.addVoter(voter.getId(), key);
+            voter.setPublicKey(key.getPublic().toString());
             voterService.saveVoter(voter);
-        } catch (RemoteException | NoSuchAlgorithmException | InvalidKeySpecException e) {
+        } catch (NoSuchAlgorithmException | NoSuchProviderException e) {
             e.printStackTrace();
         }
-
         return voter;
     }
 
@@ -83,7 +78,7 @@ public class HomeController {
         return candidatService.addCandidat(candidate);
     }
 
-    //
+    // le principe de cette méthode est génère une signature à partir du private key de voter // et de l'envoyer.
     @PostMapping("/vote")
     public Candidate vote(@RequestBody() VoteDto voteDto) {
         try {
@@ -94,15 +89,19 @@ public class HomeController {
             if (candidatService.findById(voteDto.getCandidatId()) == null) {
                 throw new CandidateNotFoundException("Candidate not found");
             }
-            long id = remote_service.vote(voteDto);
+            KeyPair keyPair = State.getById(voteDto.getVoter_id());
+//            génèrer le sign Message
+            byte[] signMessage = GetKey.signMessage(keyPair.getPrivate(), voteDto.getMessage());
+            voteDto.setSignature(signMessage);
+            long id = remote_service.vote(voteDto, keyPair.getPublic());
             System.out.println("Id du Candidate est " + id);
             if (id == -2) {
                 System.err.println("Voter with id " + voteDto.getVoter_id() + " already voted");
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Voter with id " + voteDto.getVoter_id() + "already voted");
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Voter with id " + voteDto.getVoter_id() + "already voted");
             }
             if (id == -1) {
                 System.err.println("Signature is not correct !!");
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Signature is not correct !!");
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Signature is not correct !!");
             }
             candidate = candidatService.findById(id);
             Integer count = candidate.getCount() + 1;
@@ -111,10 +110,14 @@ public class HomeController {
             return candidate;
         } catch (RemoteException e) {
             System.out.println(e.getLocalizedMessage());
+        } catch (NoSuchAlgorithmException | InvalidKeyException | NoSuchProviderException | SignatureException e) {
+            e.printStackTrace();
         }
         return null;
     }
 
+
+    //    vote result
     @GetMapping("/vote-result")
     public ResponseEntity<ResultReponse> vote() {
         List<Candidate> candidates = candidatService.getAllCandidates();

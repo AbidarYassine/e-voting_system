@@ -2,7 +2,7 @@ package com.fstg.vote_electronique.shared.utilsSignature;
 
 import java.security.*;
 
-public class GetKey {
+public class DigitalSignature {
 
 
     //    generate KeyPair (public key ,private Key ) par L'algorithm DSA Digital Signature Algorithm

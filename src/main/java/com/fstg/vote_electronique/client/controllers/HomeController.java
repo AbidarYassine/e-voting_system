@@ -14,7 +14,7 @@ import com.fstg.vote_electronique.client.service.VoterService;
 import com.fstg.vote_electronique.server.Vote;
 import com.fstg.vote_electronique.shared.beans.Candidate;
 import com.fstg.vote_electronique.shared.beans.Voter;
-import com.fstg.vote_electronique.shared.utilsSignature.GetKey;
+import com.fstg.vote_electronique.shared.utilsSignature.DigitalSignature;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -39,7 +39,7 @@ public class HomeController {
 
 
     @PostMapping("/voter/register")
-    public Voter home(@RequestBody() VoterDto voterDto) {
+    public Voter register(@RequestBody() VoterDto voterDto) {
         Voter voter = null;
         KeyPair key = null;
         try {
@@ -48,7 +48,7 @@ public class HomeController {
             if (voterF != null)
                 throw new VoterAlreadyExiste("Voter with name " + voterDto.getName() + " already exists");
             voter = voterService.saveVoter(voter);
-            key = GetKey.generateKeyPair();
+            key = DigitalSignature.generateKeyPair();
             State.addVoter(voter.getId(), key);
             voter.setPublicKey(key.getPublic().toString());
             voterService.saveVoter(voter);
@@ -91,9 +91,12 @@ public class HomeController {
             }
             KeyPair keyPair = State.getById(voteDto.getVoter_id());
 //            génèrer le sign Message
-            byte[] signMessage = GetKey.signMessage(keyPair.getPrivate(), voteDto.getMessage());
+            byte[] signMessage = DigitalSignature.signMessage(keyPair.getPrivate(), voteDto.getMessage());
             voteDto.setSignature(signMessage);
             long id = remote_service.vote(voteDto, keyPair.getPublic());
+
+
+//            gerer les exception possible
             System.out.println("Id du Candidate est " + id);
             if (id == -2) {
                 System.err.println("Voter with id " + voteDto.getVoter_id() + " already voted");
